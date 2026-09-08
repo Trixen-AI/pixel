@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 500 500" shape-rendering="crispEdges" role="img" aria-label="Pixel Dividend">
+  <title>Pixel Dividend</title>
+  <!--
+    The favicon mark at 500x500.
+
+    Same quincunx as public/favicon.svg - the five face of a die, which is also
+    the smallest arrangement that reads as a board rather than a grid.
+
+    Geometry is whole pixels on purpose: a straight 32 -> 500 scale puts the
+    blocks on half pixels (4/32 * 500 = 62.5) and frays every edge. Margin 64
+    with a 124 block keeps 64 + 124*3 + 64 = 500 exactly, and holds the original
+    margin-to-block ratio to within a pixel.
+  -->
+  <rect width="500" height="500" fill="#000000"/>
+  <rect x="64"  y="64"  width="124" height="124" fill="#FFFFFF"/>
+  <rect x="312" y="64"  width="124" height="124" fill="#FFFFFF"/>
+  <rect x="188" y="188" width="124" height="124" fill="#FFFFFF"/>
+  <rect x="64"  y="312" width="124" height="124" fill="#FFFFFF"/>
+  <rect x="312" y="312" width="124" height="124" fill="#FFFFFF"/>
+</svg>

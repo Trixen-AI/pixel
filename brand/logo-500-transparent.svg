@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 500 500" shape-rendering="crispEdges" role="img" aria-label="Pixel Dividend">
+  <title>Pixel Dividend</title>
+  <!-- Same mark, no ground. For placing over an existing dark surface. -->
+  <rect x="64"  y="64"  width="124" height="124" fill="#FFFFFF"/>
+  <rect x="312" y="64"  width="124" height="124" fill="#FFFFFF"/>
+  <rect x="188" y="188" width="124" height="124" fill="#FFFFFF"/>
+  <rect x="64"  y="312" width="124" height="124" fill="#FFFFFF"/>
+  <rect x="312" y="312" width="124" height="124" fill="#FFFFFF"/>
+</svg>

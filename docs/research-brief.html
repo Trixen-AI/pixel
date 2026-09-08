@@ -1,0 +1,743 @@
+<title>Pixel Dividend</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* ------------------------------------------------------------------
+     1-bit board. One committed visual world: black ground, lit pixels.
+     There is no accent hue anywhere on this page by design - emphasis is
+     inversion, and state is carried by fill pattern, never by colour.
+     ------------------------------------------------------------------ */
+  :root {
+    --ink:   #000000;   /* the board */
+    --paper: #FFFFFF;   /* a lit pixel */
+    --glow:  #E8E8E8;   /* running text */
+    --dim:   #9A9A9A;   /* secondary */
+    --rule:  #2E2E2E;   /* hairlines, grid */
+    --sunk:  #0A0A0A;   /* recessed panel */
+
+    --pixel: 'Press Start 2P', 'Courier New', monospace;
+    --term:  'VT323', 'Courier New', monospace;
+    --data:  'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ink);
+    color: var(--glow);
+    font-family: var(--term);
+    font-size: 21px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0 20px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet { max-width: 1080px; margin: 0 auto; }
+
+  /* ---------- type scale ---------- */
+  h1 {
+    font-family: var(--pixel);
+    font-size: clamp(20px, 4.4vw, 42px);
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--paper);
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--pixel);
+    font-size: clamp(13px, 2vw, 17px);
+    line-height: 1.6;
+    margin: 0 0 4px;
+    color: var(--paper);
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--data);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+    color: var(--paper);
+  }
+  p { margin: 0 0 16px; max-width: 68ch; }
+  a { color: var(--paper); text-decoration: underline; text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible, canvas:focus-visible {
+    outline: 2px solid var(--paper); outline-offset: 3px;
+  }
+
+  .eyebrow {
+    font-family: var(--data);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+    display: block;
+    margin-bottom: 14px;
+  }
+
+  .lede { font-size: 25px; color: var(--paper); max-width: 60ch; }
+  .dim  { color: var(--dim); }
+  .mono { font-family: var(--data); font-size: 14px; letter-spacing: -0.01em; }
+
+  /* ---------- structure ---------- */
+  header.masthead { padding: 72px 0 40px; }
+
+  .rule { height: 1px; background: var(--rule); border: 0; margin: 0; }
+
+  section { padding: 56px 0 8px; }
+
+  .sec-head { display: flex; gap: 20px; align-items: baseline; margin-bottom: 28px; }
+  .sec-head .idx {
+    font-family: var(--pixel); font-size: 11px; color: var(--dim);
+    flex: none; padding-top: 4px;
+  }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px; }
+
+  /* ---------- board ---------- */
+  .board-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 620px) minmax(260px, 1fr);
+    gap: 36px;
+    align-items: start;
+  }
+  @media (max-width: 860px) { .board-wrap { grid-template-columns: 1fr; } }
+
+  #board {
+    width: 100%;
+    max-width: 620px;
+    aspect-ratio: 1;
+    display: block;
+    image-rendering: pixelated;
+    background: var(--ink);
+    border: 1px solid var(--rule);
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  .readout {
+    font-family: var(--data);
+    font-size: 13px;
+    line-height: 1.9;
+    border: 1px solid var(--rule);
+    padding: 18px 20px;
+    background: var(--sunk);
+  }
+  .readout .row { display: flex; justify-content: space-between; gap: 16px; }
+  .readout .k { color: var(--dim); }
+  .readout .v { color: var(--paper); font-variant-numeric: tabular-nums; text-align: right; }
+  .readout .tile-id {
+    font-family: var(--pixel); font-size: 15px; color: var(--paper);
+    display: block; margin-bottom: 14px;
+  }
+  .hint { font-size: 17px; color: var(--dim); margin-top: 14px; max-width: 60ch; }
+
+  /* ---------- tables ---------- */
+  .scroller { overflow-x: auto; border: 1px solid var(--rule); background: var(--sunk); }
+  .tall { max-height: 460px; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--data); font-size: 13px; }
+  th, td { text-align: left; padding: 9px 14px; white-space: nowrap; }
+  thead th {
+    position: sticky; top: 0; background: #111111; color: var(--dim);
+    font-weight: 500; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    border-bottom: 1px solid var(--rule);
+  }
+  tbody tr { border-bottom: 1px solid #1A1A1A; }
+  tbody tr:last-child { border-bottom: 0; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.addr { color: var(--dim); }
+  .tk { color: var(--paper); }
+  tbody tr.is-p1 { background: #141414; }
+
+  /* status carried by pattern, not colour */
+  .chip {
+    font-family: var(--data); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 2px 7px; border: 1px solid var(--rule); color: var(--dim); white-space: nowrap;
+  }
+  .chip.ok { color: var(--ink); background: var(--paper); border-color: var(--paper); }
+
+  /* ---------- panels ---------- */
+  .panel { border: 1px solid var(--rule); padding: 24px 26px; background: var(--sunk); }
+  .panel h3 { margin-bottom: 12px; }
+  .panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+
+  .hatch {
+    border: 1px solid var(--rule);
+    border-left: 5px solid transparent;
+    padding: 22px 26px;
+    background:
+      linear-gradient(var(--sunk), var(--sunk)) padding-box,
+      repeating-linear-gradient(45deg, #FFFFFF 0 2px, #000000 2px 7px) border-box;
+  }
+  .hatch h3 { margin-bottom: 12px; }
+  .hatch p:last-child { margin-bottom: 0; }
+
+  ul { margin: 0 0 16px; padding-left: 22px; max-width: 68ch; }
+  li { margin-bottom: 7px; }
+  li::marker { color: var(--dim); }
+
+  ol.loop { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+  ol.loop li {
+    counter-increment: step;
+    display: grid; grid-template-columns: 46px 1fr; gap: 18px;
+    padding: 16px 0; border-top: 1px solid var(--rule); margin: 0;
+  }
+  ol.loop li::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: var(--pixel); font-size: 11px; color: var(--dim); padding-top: 5px;
+  }
+  ol.loop li b { color: var(--paper); font-weight: normal; font-family: var(--data);
+    font-size: 14px; letter-spacing: 0.04em; display: block; margin-bottom: 3px; }
+  ol.loop li span { color: var(--glow); }
+
+  code {
+    font-family: var(--data); font-size: 0.82em;
+    background: #161616; padding: 1px 6px; border: 1px solid var(--rule);
+    color: var(--paper);
+  }
+  pre {
+    font-family: var(--data); font-size: 13px; line-height: 1.7;
+    background: var(--sunk); border: 1px solid var(--rule);
+    padding: 18px 20px; overflow-x: auto; margin: 0 0 18px;
+    color: var(--glow);
+  }
+  pre b { color: var(--paper); font-weight: 500; }
+
+  .swatches { display: flex; border: 1px solid var(--rule); flex-wrap: wrap; }
+  .swatches div { flex: 1 1 90px; padding: 14px 12px 12px; border-right: 1px solid var(--rule);
+    font-family: var(--data); font-size: 10px; letter-spacing: 0.06em; }
+  .swatches div:last-child { border-right: 0; }
+  .swatches .box { height: 34px; margin-bottom: 9px; border: 1px solid var(--rule); }
+  .swatches .name { color: var(--paper); display: block; }
+  .swatches .hex { color: var(--dim); }
+
+  .type-spec { border: 1px solid var(--rule); }
+  .type-spec > div { padding: 18px 22px; border-bottom: 1px solid var(--rule); }
+  .type-spec > div:last-child { border-bottom: 0; }
+  .type-spec .sample { color: var(--paper); margin-bottom: 8px; overflow-x: auto; }
+  .type-spec .why { font-family: var(--data); font-size: 12px; color: var(--dim); max-width: 72ch; line-height: 1.7; }
+
+  footer { padding: 56px 0 0; font-family: var(--data); font-size: 12px; color: var(--dim);
+    line-height: 1.9; max-width: 78ch; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <span class="eyebrow">Research brief &middot; 7 September 2026 &middot; pre-build</span>
+    <h1>Pixel Dividend</h1>
+    <p class="lede" style="margin-top:26px;">A 32&times;32 board on Robinhood Chain. 1,024 tiles, one NFT each. Every tile is staked to a real tokenized stock, and the treasury's yield is paid out per tile.</p>
+    <p class="dim" style="max-width:66ch;">This document is the groundwork: which contract addresses are genuine and how that was proven, where the yield actually comes from, how the game is played, and the 1-bit system the whole thing is drawn in.</p>
+  </header>
+
+  <hr class="rule">
+
+  <section>
+    <span class="eyebrow">The board</span>
+    <div class="board-wrap">
+      <div>
+        <canvas id="board" width="576" height="576" tabindex="0" aria-label="Interactive 32 by 32 game board. Use arrow keys to move between tiles."></canvas>
+        <p class="hint">Example board state, not live data. Hover or arrow-key across a tile to inspect it. Fill density is the tile's yield weight; white outlines mark territory borders.</p>
+      </div>
+      <div>
+        <div class="readout" id="readout"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="idx">01</span>
+      <div>
+        <h2>What is actually verified</h2>
+        <p class="dim" style="margin:6px 0 0;">Nothing below was copied from a token list or an article.</p>
+      </div>
+    </div>
+
+    <p>Every address in this brief was read straight off Robinhood Chain on 7 September 2026, around block <span class="mono">0x35e6ed7</span>. Three checks, in order:</p>
+
+    <ol class="loop" style="margin-bottom:28px;">
+      <li><b>eth_getCode</b><span>Each genuine stock token is a 283-byte ERC-1967 beacon proxy. All fifty are byte-identical &mdash; same factory, same deployment.</span></li>
+      <li><b>eth_getStorageAt &rarr; beacon slot</b><span>The beacon pointer must equal <span class="mono">0xe10b6f6b&hellip;62151b00</span>. This is the check that carries the weight; the rest is corroboration.</span></li>
+      <li><b>symbol() and decimals()</b><span>Symbol matches the ticker, decimals is 18. This is where the registry was caught being wrong once &mdash; see below.</span></li>
+    </ol>
+
+    <div class="cols">
+      <div class="hatch">
+        <h3>Never verify by name</h3>
+        <p style="font-size:19px;">A token called <span class="mono">TheGreenHood</span> trades on this chain under the symbol <span class="mono">HOOD</span> with 1,137 holders. It passes any name or symbol check a person would do by eye. Its beacon slot is empty, so it fails check 2 instantly.</p>
+        <p style="font-size:19px;">Five separate tokens use the symbol <span class="mono">USDG</span>. Four are 44-byte minimal-proxy clones with a suspiciously round 1,000,000,000 supply and 18 decimals. The real Global Dollar has <b>6 decimals</b> &mdash; that alone separates it.</p>
+      </div>
+      <div class="panel">
+        <h3>The explorer is not a source</h3>
+        <p style="font-size:19px;">Blockscout labels SK hynix as <span class="mono">SKYHY</span>. The contract's own <span class="mono">symbol()</span> returns <span class="mono">SKHY</span>. The first draft of the registry shipped the explorer's label; the verification script rejected it and the build failed, which is exactly what it is for.</p>
+        <p style="font-size:19px;">It is also the only genuine token not named <span class="mono">&ldquo;&hellip; &bull; Robinhood Token&rdquo;</span>, which is why the naming convention cannot be a rule.</p>
+      </div>
+    </div>
+
+    <h3 style="margin:36px 0 12px;">Network</h3>
+    <pre><b>Robinhood Chain</b>   Arbitrum Orbit (Nitro) L2, settles to Ethereum. Live 1 Jul 2026.
+chainId       <b>4663</b>  (0x1237, confirmed via eth_chainId)
+rpc           <b>https://rpc.mainnet.chain.robinhood.com</b>
+explorer      <b>https://robinhoodchain.blockscout.com</b>
+gas           <b>ETH</b> &mdash; no native token. Base fee ~0.05 gwei, blocks ~100ms.
+testnet       chainId 46630, rpc.testnet.chain.robinhood.com
+
+USDG   <b>0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168</b>   6 decimals   settlement
+WETH   <b>0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73</b>  18 decimals</pre>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="sec-head">
+      <span class="idx">02</span>
+      <div>
+        <h2>Where the yield comes from</h2>
+        <p class="dim" style="margin:6px 0 0;">This is the part that makes the concept work, and it is not obvious.</p>
+      </div>
+    </div>
+
+    <p>A Robinhood stock token does not pay a dividend into your wallet. Instead the contract carries a <code>uiMultiplier()</code>, and the token's value is <span class="mono">underlying price &times; multiplier</span>. When a dividend is reinvested or a split happens, Robinhood calls <code>updateMultiplier()</code> and the number moves. Chainlink's feed reads that same multiplier to publish a total-return price.</p>
+
+    <p><b>So yield accrues inside the token itself.</b> A treasury that simply holds the token captures it &mdash; no claim step, no distribution contract on Robinhood's side, nothing to integrate. That is what makes &ldquo;pixels pay real yield&rdquo; mechanically honest rather than a slogan.</p>
+
+    <p>Read live on 7 September 2026, ten weeks after mainnet. Most tickers still sit at exactly 1.0 &mdash; they have not paid anything yet:</p>
+
+    <div class="scroller" style="margin-bottom:18px;">
+      <table>
+        <thead><tr><th>Ticker</th><th>Instrument</th><th class="num">uiMultiplier</th><th class="num">Accrued</th><th>Reading</th></tr></thead>
+        <tbody id="yieldRows"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h3>SGOV is the engine, the famous names are the draw</h3>
+      <p style="font-size:19px;">SGOV is a 0&ndash;3 month Treasury ETF. Its multiplier moved 0.510% in 68 days &mdash; roughly a <b>2.8% observed run-rate</b> if it continues at that pace. It is the only instrument here throwing off yield on a predictable schedule, and it should be the treasury's base layer.</p>
+      <p style="font-size:19px;">NVDA, TSLA, GME and SPCX are all sitting at 1.000000. They contribute nothing as yield &mdash; their draw is price exposure and name recognition. Design the game so the base reward is real and the famous tickers are the bet, not the other way round. That run-rate is an observation over ten weeks, not a promise, and it must never be printed in the UI as an APY.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="sec-head">
+      <span class="idx">03</span>
+      <div>
+        <h2>Verified token registry</h2>
+        <p class="dim" style="margin:6px 0 0;">50 instruments, all beacon-checked. Phase&nbsp;1 basket highlighted.</p>
+      </div>
+    </div>
+    <p>Holder counts are a rough depth signal at time of verification, not live data. Sorted by holders; the sixteen Phase&nbsp;1 tickers are marked <span class="chip ok">P1</span>.</p>
+    <div class="scroller tall">
+      <table>
+        <thead><tr><th>Ticker</th><th>Instrument</th><th>Contract</th><th class="num">Holders</th><th></th></tr></thead>
+        <tbody id="tokenRows"></tbody>
+      </table>
+    </div>
+    <p class="dim" style="font-size:18px;margin-top:14px;">The beacon is upgradeable, so this table has a shelf life. <code>scripts/verify-tokens.mjs</code> re-checks all fifty against the chain and exits non-zero on any mismatch &mdash; wire it into CI.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="sec-head">
+      <span class="idx">04</span>
+      <div>
+        <h2>How the game is played</h2>
+        <p class="dim" style="margin:6px 0 0;">A board game needs a decision. This is the decision.</p>
+      </div>
+    </div>
+
+    <p>Holding an NFT is not a game. The game is that a tile has to be <em>positioned</em>, and the position can be wrong. Each round every tile is staked to one ticker, and what a tile earns depends on the ticker's performance <b>and</b> on who its neighbours are.</p>
+
+    <ol class="loop">
+      <li><b>Claim</b><span>Mint one of 1,024 tiles. Each is a fixed coordinate on the board &mdash; A1 through AF32. Position is permanent; the tile is the deed to a square.</span></li>
+      <li><b>Stake</b><span>Point the tile at one of the sixteen Phase&nbsp;1 tickers. This is the move, and it can be changed once per round.</span></li>
+      <li><b>Territory</b><span>Orthogonally adjacent tiles staked to the same ticker form a territory. A territory of <span class="mono">n</span> tiles earns a bonus weight that scales with <span class="mono">n</span>, so coordinating with your neighbours beats optimising alone. This is the whole social layer: block trades, alliances, and squeezing someone out of a corner.</span></li>
+      <li><b>Settle</b><span>At round close the Chainlink feeds are read. Treasury yield for the round is split across tiles by weight: ticker performance &times; territory bonus. Losing tickers still earn the SGOV floor &mdash; a bad call costs upside, not principal.</span></li>
+      <li><b>Compound or claim</b><span>Take the payout in the staked stock token, or leave it in the treasury and let the multiplier keep working. Claiming is a transfer; both paths stay on-chain.</span></li>
+    </ol>
+
+    <div class="panel" style="margin-top:28px;">
+      <h3>Why a contract can hold these tokens at all</h3>
+      <p style="font-size:19px;">This was worth checking before designing anything. A <code>transfer</code> was simulated from a real holder to both an EOA and a contract address &mdash; both returned success, so there is no allowlist and no transfer restriction. The implementation exposes <code>isBlocked(address)</code>, <code>pause()</code> and <code>adminBurn()</code>, but <code>tokenPaused()</code> and <code>oraclePaused()</code> read false across every ticker checked. It also implements <code>permit()</code> (ERC-2612), so staking a tile can be a single signature with no separate approval transaction.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="sec-head">
+      <span class="idx">05</span>
+      <div>
+        <h2>The 1-bit system</h2>
+        <p class="dim" style="margin:6px 0 0;">Black and white, taken literally rather than as a mood.</p>
+      </div>
+    </div>
+
+    <p>A monochrome brief usually turns into &ldquo;dark UI with one accent colour&rdquo;. This one takes the constraint at face value: <b>there is no accent hue anywhere</b>. Emphasis is inversion &mdash; a white block with black type. Quantity is dither density. Status is fill pattern: solid means verified, hatched means suspect. On a board made of pixels that is the native vocabulary, and it means the system survives being printed, screenshotted, or rendered into an NFT image at 32&times;32.</p>
+
+    <div class="swatches" style="margin-bottom:32px;">
+      <div><div class="box" style="background:#000000"></div><span class="name">ink</span><span class="hex">#000000</span></div>
+      <div><div class="box" style="background:#FFFFFF"></div><span class="name">paper</span><span class="hex">#FFFFFF</span></div>
+      <div><div class="box" style="background:#E8E8E8"></div><span class="name">glow</span><span class="hex">#E8E8E8</span></div>
+      <div><div class="box" style="background:#9A9A9A"></div><span class="name">dim</span><span class="hex">#9A9A9A</span></div>
+      <div><div class="box" style="background:#2E2E2E"></div><span class="name">rule</span><span class="hex">#2E2E2E</span></div>
+      <div><div class="box" style="background:#0A0A0A"></div><span class="name">sunk</span><span class="hex">#0A0A0A</span></div>
+    </div>
+
+    <div class="type-spec" style="margin-bottom:28px;">
+      <div>
+        <div class="sample" style="font-family:var(--pixel);font-size:17px;">PIXEL DIVIDEND</div>
+        <div class="why">Press Start 2P &mdash; display only. Wall titles, tile IDs, section numbers. It is extremely wide, so it never runs as body text and never below ~11px.</div>
+      </div>
+      <div>
+        <div class="sample" style="font-family:var(--term);font-size:25px;">Tile AF12 earns 0.0000412 SGOV this round</div>
+        <div class="why">VT323 &mdash; body and in-game UI, set at 21&ndash;25px. Terminal texture without costing legibility.</div>
+      </div>
+      <div>
+        <div class="sample" style="font-family:var(--data);font-size:15px;">0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC</div>
+        <div class="why">JetBrains Mono &mdash; addresses, balances, every number. Chosen for one functional reason: a person copying an address has to tell 0 from O and 1 from l. VT323 cannot do that job, so it never touches an address.</div>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <h3>Board encoding</h3>
+        <ul style="font-size:19px;">
+          <li><b>Density</b> &mdash; Bayer 4&times;4 dither, six levels. Encodes the tile's yield weight.</li>
+          <li><b>Outline</b> &mdash; 1px white where a tile's neighbour holds a different ticker. Draws territories.</li>
+          <li><b>Inversion</b> &mdash; the selected tile. One selection at a time, so it never competes.</li>
+          <li><b>Empty</b> &mdash; unminted tiles stay black with only the grid hairline.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Rules that hold it together</h3>
+        <ul style="font-size:19px;">
+          <li><code>image-rendering: pixelated</code> everywhere; no anti-aliased board.</li>
+          <li>Canvas drawn at <span class="mono">devicePixelRatio</span>, logical grid 32&times;32 at 18px cells.</li>
+          <li>Sixteen tickers is well past what dither patterns can distinguish &mdash; identity comes from the readout, never from pattern alone.</li>
+          <li>Focus states visible; the board is arrow-key navigable, not mouse-only.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="sec-head">
+      <span class="idx">06</span>
+      <div>
+        <h2>Build</h2>
+        <p class="dim" style="margin:6px 0 0;">React + Vite + TypeScript, Reown for the wallet.</p>
+      </div>
+    </div>
+
+    <div class="cols" style="margin-bottom:26px;">
+      <div class="panel">
+        <h3>Front end</h3>
+        <ul style="font-size:19px;">
+          <li>Vite + React 19 + TypeScript</li>
+          <li><span class="mono">@reown/appkit</span> + <span class="mono">@reown/appkit-adapter-wagmi</span></li>
+          <li>wagmi + viem + TanStack Query</li>
+          <li>Board on <span class="mono">&lt;canvas&gt;</span>, not 1,024 DOM nodes</li>
+          <li>Multicall3 at <span class="mono">0xcA11bde0&hellip;3976CA11</span> for batched tile reads</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Contracts</h3>
+        <ul style="font-size:19px;">
+          <li>ERC-721, supply hard-capped at 1,024</li>
+          <li>Treasury holding the Phase&nbsp;1 basket</li>
+          <li>Round settlement reading Chainlink <span class="mono">latestRoundData()</span></li>
+          <li>Pull-payment claims &mdash; never loop 1,024 transfers</li>
+          <li>Foundry; deploy to chainId 46630 first</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>Robinhood Chain is not in viem's bundled chain list, so define it once and pass it to both wagmi and AppKit. This is already written to <code>src/config/chain.ts</code> alongside the registry:</p>
+
+    <pre>import { defineChain } from 'viem'
+
+export const robinhoodChain = defineChain({
+  id: <b>4663</b>,
+  name: 'Robinhood Chain',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: { default: { http: ['https://rpc.mainnet.chain.robinhood.com'] } },
+  blockExplorers: {
+    default: { name: 'Blockscout', url: 'https://robinhoodchain.blockscout.com' },
+  },
+  contracts: {
+    multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' },
+  },
+})</pre>
+
+    <p class="dim" style="font-size:18px;">Reown needs a <span class="mono">projectId</span> from dashboard.reown.com. The public RPC is rate-limited and not production-grade &mdash; budget for a paid endpoint before launch.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="sec-head">
+      <span class="idx">07</span>
+      <div>
+        <h2>What could go wrong</h2>
+        <p class="dim" style="margin:6px 0 0;">Worth deciding on deliberately rather than discovering later.</p>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="hatch">
+        <h3>Issuer control is real</h3>
+        <p style="font-size:19px;">The token implementation includes <code>pause()</code>, <code>adminBurn(address,uint256)</code> and <code>isBlocked(address)</code>, and the beacon is upgradeable &mdash; one call changes all fifty tokens at once. Nothing is paused or blocked today, but the treasury's assets sit behind a switch someone else owns. Make round settlement degrade safely if a ticker is paused mid-round, and hold the SGOV floor in something you can still pay out.</p>
+      </div>
+      <div class="hatch">
+        <h3>These are not shares</h3>
+        <p style="font-size:19px;">Stock tokens give economic exposure, issued by Robinhood Assets (Jersey) Limited &mdash; not legal ownership, no voting. Paying yield derived from securities-tracking assets to NFT holders sits squarely in securities territory in most jurisdictions, and availability already varies by country. Get this in front of a lawyer before the mint, not after, and keep every surface saying <em>pass-through</em> rather than <em>APY</em> or <em>guaranteed</em>.</p>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:24px;">
+      <h3>Open decisions</h3>
+      <ul style="font-size:19px;">
+        <li>Mint price and currency. USDG is the chain's settlement asset and the obvious choice, but it pulls a 6-decimal token into an 18-decimal codebase &mdash; handle that conversion in one place or it will bite.</li>
+        <li>Round length. A week gives price moves room to matter and keeps settlement gas low; a day makes it a game people check daily. This changes the whole feel.</li>
+        <li>Whether the treasury is seeded from mint proceeds or funded up front so round one already pays.</li>
+        <li>Territory bonus curve. Linear in <span class="mono">n</span> is easy to reason about; anything steeper concentrates the board into a few whales by round five.</li>
+      </ul>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <footer>
+    All contract data read from Robinhood Chain (4663) on 7 September 2026 near block 0x35e6ed7 and re-checked against beacon 0xe10b6f6b275de231345c20d14ab812db62151b00. Holder counts via Blockscout. Board state above is illustrative, not live. Not investment advice.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOKENS = [["NVDA","0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC","NVIDIA",119221,1],["SPCX","0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa","Space Exploration Technologies Corp. Class A Common Stock",84597,1],["AAPL","0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9","Apple",67798,1.0005660800610925],["SPY","0x117cc2133c37B721F49dE2A7a74833232B3B4C0C","SPDR S&P 500 ETF Trust",61872,1],["TSLA","0x322F0929c4625eD5bAd873c95208D54E1c003b2d","Tesla",56342,1],["GOOGL","0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3","Alphabet Class A",52233,1],["MSFT","0xe93237C50D904957Cf27E7B1133b510C669c2e74","Microsoft",48908,1],["GME","0x1b0E319c6A659F002271B69dB8A7df2F911c153E","GameStop",43776,1],["AMZN","0x12f190a9F9d7D37a250758b26824B97CE941bF54","Amazon",42087,1],["AMD","0x86923f96303D656E4aa86D9d42D1e57ad2023fdC","AMD",37424,1],["PLTR","0x894E1EC2D74FFE5AEF8Dc8A9e84686acCB964F2A","Palantir Technologies",36696,1],["META","0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35","Meta Platforms",33482,1],["MU","0xfF080c8ce2E5feadaCa0Da81314Ae59D232d4afD","Micron Technology",33098,1.0000748232191712],["COIN","0x6330D8C3178a418788dF01a47479c0ce7CCF450b","Coinbase",27558,1],["DJT","0x1D11f0496982706C5e14A514D4E79F2e6BdE4516","Trump Media & Technology Group",26506,1],["INTC","0xc72b96e0E48ecd4DC75E1e45396e26300BC39681","Intel",25728,1],["SNDK","0xB90A19fF0Af67f7779afF50A882A9CfF42446400","Sandisk Corporation",24749,1],["GLD","0xC9a981FEE1F9DEc688bb123ccDeCc63D0deBFC4e","SPDR Gold Trust",22314,1],["CRWV","0x5f10A1C971B69e47e059e1dC91901B59b3fB49C3","CoreWeave",19438,1],["ORCL","0xb0992820E760d836549ba69BC7598b4af75dEE03","Oracle",19421,1.0022109149710134],["RDDT","0x05b37Fb53A299a1b874A619e1c4C404D52C36F4C","Reddit",18889,1],["USAR","0xd917B029C761D264c6A312BBbcDA868658eF86a6","USA Rare Earth",18660,1],["QQQ","0xD5f3879160bc7c32ebb4dC785F8a4F505888de68","Invesco QQQ",18449,1],["BE","0x822CC93fFD030293E9842c30BBD678F530701867","Bloom Energy",16735,1],["COST","0x4EA005168D7F09a7A0Ba9D1DEf21a479950E44C2","Costco",14479,1.0006120402962597],["NFLX","0xE0444EF8BF4eD74f74FD73686e2ddF4C1c5591E8","Netflix",13905,1],["CRCL","0xdF0992E440dD0be65BD8439b609d6D4366bf1CB5","Circle Internet Group",9956,1],["TTWO","0x5e81213613b6B86EaB4c6c50d718d34359459786","Take-Two Interactive Software",9412,1],["AMC","0x05a3d1Cd21d0C88145E82600E62e7E496e0F222B","AMC Entertainment",8986,1],["MSTR","0xec262a75e413fAfD0dF80480274532C79D42da09","Strategy Inc.",8777,1],["HIMS","0xCceE82fE024c36fA15E1005edE3E9e4787e23D09","Hims & Hers Health",7761,1],["TSM","0x58FfE4a942d3885bAa22D7520691F611EF09e7AA","Taiwan Semiconductor Manufacturing",7648,1],["RBLX","0xF0C4BF4C582cb3836e98394b1d4e7B7281101bE8","Roblox",6934,1],["USO","0xa30FA36Db767ad9eD3f7a60fC79526fB4d56D344","United States Oil Fund",6830,1],["SLV","0x411eFb0E7f985935DAec3D4C3ebaEa0d0AD7D89f","iShares Silver Trust",5628,1],["LULU","0x4e62068525Ab11FE768e29dfD00ef909B9803016","Lululemon",4706,1],["DELL","0x941AE714EC6D8130c7B75d67160Ca08f1e7d11Dd","Dell",4607,1.0000637086201245],["BB","0x48E39E56aCdbA37b09020C0b734A613C9a2f100A","Blackberry",4132,1],["LLY","0x8005d266423c7ea827372c9c864491e5786600ea","Eli Lilly",3914,1],["SGOV","0x92FD66527192E3e61d4DDd13322Aa222DE86F9B5","iShares 0-3 Month Treasury Bond",3418,1.005101770003215],["JNJ","0x03DfbBE0AC4E7bCDaFd08eD41A400326B77D8c80","Johnson & Johnson",2370,1],["BABA","0xad25Ac6C84D497db898fa1E8387bf6Af3532a1c4","Alibaba",2064,1],["QUBT","0x59818904ab4cE163b3cE4FfB64f2D6Ca02c434B4","Quantum Computing",1803,1],["SNAP","0xF6589F11Bc40b669e584073F428B05562F568733","Snap",1617,1],["IBM","0x980dcf6766FA79f5Cf0c4AAdb3ab477ff15a9619","IBM",1518,1],["MRNA","0x43B07D15cE533bEc5476d70C22a78a1B2B662155","Moderna",1366,1],["SKHY","0x84CAb63bc87912E71ad199ff14A0bA45de68FeF8","SK hynix Inc. American Depositary Shares",1316,1],["RIVN","0xB1BF26c1D20ff267A4f93550d1E0d06ac40a114B","Rivian Automotive",1077,1],["FIG","0x41F4267525a8AFf329540eF24fD83d9044758B33","Figma",1049,1],["EWY","0x7f0aBeF0C07280F82c6a08ead09dEd6BAE2C13Fc","iShares MSCI South Korea fund",204,1]];
+
+  var PHASE1 = ['NVDA','AAPL','TSLA','GOOGL','MSFT','AMZN','META','SPY','QQQ','GLD','SGOV','GME','COIN','PLTR','AMD','SPCX'];
+  var P1SET = {};
+  PHASE1.forEach(function (t) { P1SET[t] = true; });
+
+  var byTicker = {};
+  TOKENS.forEach(function (t) { byTicker[t[0]] = t; });
+
+  /* ---------- registry table ---------- */
+  document.getElementById('tokenRows').innerHTML = TOKENS.map(function (t) {
+    var isP1 = !!P1SET[t[0]];
+    var name = t[2].length > 42 ? t[2].slice(0, 40) + '…' : t[2];
+    return '<tr class="' + (isP1 ? 'is-p1' : '') + '">' +
+      '<td class="tk">' + t[0] + '</td>' +
+      '<td>' + name + '</td>' +
+      '<td class="addr">' + t[1] + '</td>' +
+      '<td class="num">' + t[3].toLocaleString('en-US') + '</td>' +
+      '<td>' + (isP1 ? '<span class="chip ok">P1</span>' : '') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  /* ---------- yield table ---------- */
+  var notes = {
+    SGOV: 'T-bill ETF, monthly income — the engine',
+    ORCL: 'Quarterly dividend, one paid',
+    COST: 'Quarterly dividend, one paid',
+    AAPL: 'Quarterly dividend, one paid',
+    MU:   'First partial distribution',
+    DELL: 'First partial distribution'
+  };
+  var yieldHtml = TOKENS.filter(function (t) { return t[4] > 1; })
+    .sort(function (a, b) { return b[4] - a[4]; })
+    .map(function (t) {
+      return '<tr>' +
+        '<td class="tk">' + t[0] + '</td>' +
+        '<td>' + t[2] + '</td>' +
+        '<td class="num">' + t[4].toFixed(8) + '</td>' +
+        '<td class="num">+' + ((t[4] - 1) * 100).toFixed(3) + '%</td>' +
+        '<td class="addr">' + (notes[t[0]] || '') + '</td>' +
+        '</tr>';
+    }).join('');
+  yieldHtml += ['NVDA', 'TSLA', 'SPY', 'GME'].map(function (sym) {
+    var t = byTicker[sym];
+    return '<tr>' +
+      '<td class="tk">' + t[0] + '</td>' +
+      '<td>' + (t[2].length > 34 ? t[2].slice(0, 32) + '…' : t[2]) + '</td>' +
+      '<td class="num">1.00000000</td>' +
+      '<td class="num">—</td>' +
+      '<td class="addr">Nothing paid since launch</td>' +
+      '</tr>';
+  }).join('');
+  document.getElementById('yieldRows').innerHTML = yieldHtml;
+
+  /* ---------- board ---------- */
+  var N = 32, CELL = 18, SIZE = N * CELL;
+  var canvas = document.getElementById('board');
+  var ctx = canvas.getContext('2d', { alpha: false });
+  var readout = document.getElementById('readout');
+
+  var BAYER = [
+    [0, 8, 2, 10],
+    [12, 4, 14, 6],
+    [3, 11, 1, 9],
+    [15, 7, 13, 5]
+  ];
+
+  /* deterministic PRNG so the board is identical on every load */
+  var seed = 0x9e3779b9;
+  function rnd() {
+    seed ^= seed << 13; seed >>>= 0;
+    seed ^= seed >> 17;
+    seed ^= seed << 5; seed >>>= 0;
+    return seed / 4294967296;
+  }
+
+  var seeds = PHASE1.map(function (ticker) {
+    return { x: rnd() * N, y: rnd() * N, ticker: ticker };
+  });
+
+  var tiles = new Array(N * N);
+  for (var y = 0; y < N; y++) {
+    for (var x = 0; x < N; x++) {
+      var best = 0, bestD = Infinity;
+      for (var s = 0; s < seeds.length; s++) {
+        var dx = seeds[s].x - x - 0.5, dy = seeds[s].y - y - 0.5;
+        var d = dx * dx + dy * dy;
+        if (d < bestD) { bestD = d; best = s; }
+      }
+      tiles[y * N + x] = { ticker: seeds[best].ticker, minted: rnd() > 0.11 };
+    }
+  }
+
+  /* territory size drives the adjacency bonus, which drives dither density */
+  var sizes = {};
+  tiles.forEach(function (t) {
+    if (t.minted) { sizes[t.ticker] = (sizes[t.ticker] || 0) + 1; }
+  });
+  var maxSize = 0;
+  Object.keys(sizes).forEach(function (k) { if (sizes[k] > maxSize) { maxSize = sizes[k]; } });
+  tiles.forEach(function (t) {
+    t.weight = t.minted ? sizes[t.ticker] / maxSize : 0;
+    t.level = t.minted ? 3 + Math.round(t.weight * 12) : 0;
+  });
+
+  var base = document.createElement('canvas');
+  base.width = SIZE; base.height = SIZE;
+  var bctx = base.getContext('2d');
+  var img = bctx.createImageData(SIZE, SIZE);
+  var data = img.data;
+
+  function put(i, v) { data[i] = data[i + 1] = data[i + 2] = v; data[i + 3] = 255; }
+
+  for (var py = 0; py < SIZE; py++) {
+    var cy = (py / CELL) | 0;
+    var iny = py % CELL;
+    for (var px = 0; px < SIZE; px++) {
+      var cx = (px / CELL) | 0;
+      var inx = px % CELL;
+      var tile = tiles[cy * N + cx];
+      var i = (py * SIZE + px) * 4;
+
+      if (!tile.minted) {
+        put(i, (inx === 0 || iny === 0) ? 0x24 : 0);
+        continue;
+      }
+
+      var left  = cx > 0     ? tiles[cy * N + cx - 1]   : null;
+      var up    = cy > 0     ? tiles[(cy - 1) * N + cx] : null;
+      var right = cx < N - 1 ? tiles[cy * N + cx + 1]   : null;
+      var down  = cy < N - 1 ? tiles[(cy + 1) * N + cx] : null;
+      var edge =
+        (inx === 0        && (!left  || !left.minted  || left.ticker  !== tile.ticker)) ||
+        (iny === 0        && (!up    || !up.minted    || up.ticker    !== tile.ticker)) ||
+        (inx === CELL - 1 && (!right || !right.minted || right.ticker !== tile.ticker)) ||
+        (iny === CELL - 1 && (!down  || !down.minted  || down.ticker  !== tile.ticker));
+
+      put(i, (edge || BAYER[py & 3][px & 3] < tile.level) ? 255 : 0);
+    }
+  }
+  bctx.putImageData(img, 0, 0);
+
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = SIZE * dpr;
+  canvas.height = SIZE * dpr;
+
+  var COLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  function colName(x) { return x < 26 ? COLS.charAt(x) : 'A' + COLS.charAt(x - 26); }
+
+  var sel = { x: 12, y: 9 };
+
+  function draw() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(base, 0, 0);
+    ctx.globalCompositeOperation = 'difference';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(sel.x * CELL, sel.y * CELL, CELL, CELL);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function renderReadout() {
+    var t = tiles[sel.y * N + sel.x];
+    var token = byTicker[t.ticker];
+    var rows = [
+      ['Tile', '#' + (sel.y * N + sel.x + 1) + ' of 1024'],
+      ['Status', t.minted ? 'Claimed' : 'Unminted'],
+      ['Staked to', t.minted ? t.ticker : '—'],
+      ['Instrument', t.minted ? (token[2].length > 20 ? token[2].slice(0, 18) + '…' : token[2]) : '—'],
+      ['Territory', t.minted ? sizes[t.ticker] + ' tiles' : '—'],
+      ['Yield weight', t.minted ? t.weight.toFixed(3) : '—'],
+      ['Round share', (t.minted ? (t.weight * 100 / 16) : 0).toFixed(3) + '%']
+    ];
+    readout.innerHTML =
+      '<span class="tile-id">' + colName(sel.x) + (sel.y + 1) + '</span>' +
+      rows.map(function (r) {
+        return '<div class="row"><span class="k">' + r[0] + '</span><span class="v">' + r[1] + '</span></div>';
+      }).join('') +
+      (t.minted
+        ? '<div class="row" style="margin-top:12px;"><span class="k">Contract</span></div>' +
+          '<div style="font-size:11px;word-break:break-all;color:#FFFFFF;line-height:1.6;">' + token[1] + '</div>'
+        : '');
+  }
+
+  function update() { draw(); renderReadout(); }
+
+  function pick(ev) {
+    var r = canvas.getBoundingClientRect();
+    var pt = ev.touches ? ev.touches[0] : ev;
+    var x = Math.floor((pt.clientX - r.left) / r.width * N);
+    var y = Math.floor((pt.clientY - r.top) / r.height * N);
+    if (x < 0 || y < 0 || x >= N || y >= N) { return; }
+    if (x === sel.x && y === sel.y) { return; }
+    sel.x = x; sel.y = y;
+    update();
+  }
+
+  canvas.addEventListener('mousemove', pick);
+  canvas.addEventListener('touchstart', function (e) { e.preventDefault(); pick(e); }, { passive: false });
+  canvas.addEventListener('touchmove', function (e) { e.preventDefault(); pick(e); }, { passive: false });
+  canvas.addEventListener('keydown', function (e) {
+    var moves = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    var m = moves[e.key];
+    if (!m) { return; }
+    e.preventDefault();
+    sel.x = Math.max(0, Math.min(N - 1, sel.x + m[0]));
+    sel.y = Math.max(0, Math.min(N - 1, sel.y + m[1]));
+    update();
+  });
+
+  update();
+})();
+</script>
