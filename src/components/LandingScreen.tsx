@@ -1,4 +1,5 @@
 import { AttractBackground } from './AttractBackground'
+import { XLink } from './XLink'
 import { robinhoodChain } from '../config/chain'
 import { FLOOR_TICKER } from '../game/engine'
 import type { MultipliersResult } from '../chain/useMultipliers'
@@ -86,6 +87,9 @@ export function LandingScreen({ multipliers, onPlay }: Props) {
           ))}
         </ul>
 
+        <div className="landing-social">
+          <XLink />
+        </div>
       </main>
     </div>
   )

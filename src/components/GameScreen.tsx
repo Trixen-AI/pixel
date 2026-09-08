@@ -6,6 +6,7 @@ import { TickerRail } from './TickerRail'
 import { RoundPanel } from './RoundPanel'
 import { LedgerPanel } from './LedgerPanel'
 import { WalletButton } from './WalletButton'
+import { XLink } from './XLink'
 import { HowToPlay } from './HowToPlay'
 import type { MultipliersResult } from '../chain/useMultipliers'
 
@@ -34,6 +35,7 @@ export function GameScreen({ multipliers, onExit }: Props) {
             <span className="dot" aria-hidden="true" />
             Live · chain {robinhoodChain.id}
           </span>
+          <XLink variant="compact" />
           <WalletButton />
         </div>
       </header>

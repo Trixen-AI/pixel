@@ -710,3 +710,41 @@ canvas.board {
   .landing-live { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .landing-mechanics li { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* ==================================================================
+   X / social link
+   ================================================================== */
+.xlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  /* Explicit, not just omitted: .status sets uppercase and it would be
+     inherited, and "@PIXELDIVIDEND" is not the handle. Casing is identity. */
+  text-transform: none;
+  text-decoration: none;
+  line-height: 1.4;
+  color: var(--dim);
+  border: 1px solid var(--rule);
+  /* Matches .wallet's box so the header controls sit on one line. */
+  padding: 10px 14px;
+  white-space: nowrap;
+  transition: none;
+}
+.xlink svg { display: block; }
+.xlink:hover,
+.xlink:focus-visible {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--paper);
+}
+/* Mark only, kept square for the header. The strut gives the icon-only box the
+   same 1.4em line box the text variant gets, so it lines up with .wallet
+   instead of sitting 2.4px short. */
+.xlink.compact { padding: 10px 12px; gap: 0; }
+.xlink.compact::before { content: ''; display: block; width: 0; height: 1.4em; }
+
+.landing-social { margin-top: 28px; }
+.landing-social .xlink { background: rgba(0, 0, 0, 0.72); }

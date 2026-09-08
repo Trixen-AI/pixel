@@ -3,6 +3,8 @@
 A 32×32 board game on Robinhood Chain. 1,024 tiles, one NFT each. Every tile is
 staked to a real tokenized stock, and the treasury's yield is paid out per tile.
 
+**https://pixeldividend.com** · [@PixelDividend on X](https://x.com/PixelDividend)
+
 Research brief (verified addresses, where the yield comes from, game loop,
 design system): [docs/research-brief.html](docs/research-brief.html).
 
